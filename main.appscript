@@ -1,0 +1,149 @@
+
+
+function getEvents() {
+
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt('Starting date? Ex: 1/5/2024', ui.ButtonSet.YES_NO);
+
+
+// Process the user's response.
+  if (response.getSelectedButton() == ui.Button.YES) {
+    Logger.log('The user\'s starting date is %s.', response.getResponseText());
+    var response2 = ui.prompt('Ending date? Ex: 1/12/2024', ui.ButtonSet.YES_NO);
+    var startingDate = response.getResponseText();
+    if (response2.getSelectedButton() == ui.Button.YES) {
+      Logger.log('The user\'s ending date is %s.', response2.getResponseText());
+      var endingDate = response2.getResponseText();
+  } else if (response2.getSelectedButton() == ui.Button.NO) {
+    Logger.log('The user didn\'t want to provide a ending date.');
+  } else {
+    Logger.log('The user clicked the close button in the dialog\'s title bar.');
+  }
+} else if (response.getSelectedButton() == ui.Button.NO) {
+  Logger.log('The user didn\'t want to provide a starting date.');
+} else {
+  Logger.log('The user clicked the close button in the dialog\'s title bar.');
+}
+
+
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName("Project");
+  var overheadSheet = ss.getSheetByName("Overhead");
+
+  //replace ID with your Calendar ID, more info can be found here -> https://www.youtube.com/watch?v=BUSpnXCQ8vY
+  var cal = CalendarApp.getCalendarById(ID);
+  
+  ////////
+  //create template for project sheet
+
+  var x = 1
+  var y = 1
+  
+  for (var c = 1; c <= 11; c++) {
+  
+
+    if (c == 1) {
+      p = "Project"
+    } else if (c == 2) {
+      p = "Phase"
+    } else if (c == 3) {
+      p = "Activity"
+    } else if (c == 4) {
+      p = "Mon"
+    } else if (c == 5) {
+      p = "Tue"
+    } else if (c == 6) {
+      p = "Wed"
+    } else if (c == 7) {
+      p = "Thu"
+    } else if (c == 8) {
+      p = "Fri"   
+    } else if (c == 9) {
+      p = "Sat"
+    } else if (c == 10) {
+      p = "Sun"
+    } else if (c == 11) {
+      p = "Total"
+    }
+
+    sheet.getRange(x, y).setValue(p).setBackground('#FFFF00');
+    y++;
+
+}
+  /////////
+  // Create Template for Overhead
+  overheadSheet.getRange(1, 1).setValue("Overhead").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 2).setValue("Mon").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 3).setValue("Tue").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 4).setValue("Wed").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 5).setValue("Thu").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 6).setValue("Fri").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 7).setValue("Sat").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 8).setValue("Sun").setBackground('#FFFF00');
+  overheadSheet.getRange(1, 9).setValue("Total").setBackground('#FFFF00');
+
+
+
+
+  var events = cal.getEvents(new Date(startingDate), new Date(endingDate));
+  var category1000to13000 = [];
+  var category0to28 = [];
+  var firstNumber = [];
+  var timeArr = [];
+   var row = 0;
+   var overheadRow = 0;
+  for (var i = 0; i < events.length; i++) {
+    var title = events[i].getTitle();
+    //Logger.log(events[i].getTitle());
+    var startTime = events[i].getStartTime();
+    var endTime = events[i].getEndTime();
+    var location = events[i].getLocation();
+    var description = events[i].getDescription();
+    var firstWord = events[i].getTitle();
+    var firstWordNumber = parseInt(firstWord);
+    //Logger.log(firstWordNumber);
+
+    var time = endTime - startTime;
+    time = (time/3600000);
+    if (time < 0.25) {
+      time = 0.25;
+    }
+    var date = events[i].getStartTime();
+      date = date.getDay();
+      if (firstWordNumber >= 1000 && firstWordNumber <= 13000) {
+      
+        //category1000to13000.push(events[i]);
+        firstNumber.push(firstWordNumber);
+        //sheet.getRange(i + 2, 6).setValue("project");
+        sheet.getRange(row + 2, 1).setValue(firstWordNumber);
+        sheet.getRange(row + 2, 3).setValue("Project time");
+        sheet.getRange(row + 2, 2).setValue(description);
+        
+        //timeArr.push(time);
+        
+        sheet.getRange(row + 2, date + 3.0).setValue(time);
+        //Logger.log("row: " + (row + 2) + " time: " + time);
+        row++;
+
+        } else if (firstWordNumber >= 0 && firstWordNumber <= 28) {
+          //category0to28.push(events[i]);
+          
+          var overheadName = firstWord.split(" ")[1];
+          //Logger.log(overheadSheet);
+          overheadSheet.getRange(overheadRow + 2, 1.0).setValue(overheadName);
+          Logger.log(overheadName);
+          overheadSheet.getRange(overheadRow + 2, date + 1.0).setValue(time);
+          overheadRow++;
+          
+        
+        
+        } else {
+          //ignored to not cause confusion with events that arent project work.
+        }
+
+
+}
+
+}
+
+
