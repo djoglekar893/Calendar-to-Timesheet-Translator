@@ -1,4 +1,5 @@
 function start() {
+  
   //getting user input on start date
    var ui = SpreadsheetApp.getUi();
    var response = ui.prompt('Starting date? Ex: 1/5/2024', ui.ButtonSet.YES_NO);
@@ -25,53 +26,24 @@ function start() {
   var cal = getCalendar();
   var ss = createTemplates();
   logEvents(ss, startingDate, endingDate, cal);
+  replaceDataProjectSheet(ss.getSheetByName("Project"));
+  replaceDataOverheadSheet(ss.getSheetByName("Overhead"));
 }
 
 
 function getCalendar() {
   //get info on google calendar by its ID
-  cal = CalendarApp.getCalendarById("e5f2a2844a36fec3062133adfc57217a85fac5f3b77170b0480e7615ebca4bb8@group.calendar.google.com");
+  cal = CalendarApp.getCalendarById("//replace with your calendar ID");
   return cal;
 }
+
+
 ///////
 function createTemplates() {
   //get active spreadsheet and sheets
   var ss = SpreadsheetApp.getActive();
   var sheet = ss.getSheetByName("Project");
   var overheadSheet = ss.getSheetByName("Overhead");
-  //create template for project sheet
-  var x = 1
-  var y = 1
-  
-  for (var c = 1; c <= 11; c++) {
-  
-    if (c == 1) {
-      p = "Project"
-    } else if (c == 2) {
-      p = "Phase"
-    } else if (c == 3) {
-      p = "Activity"
-    } else if (c == 4) {
-      p = "Mon"
-    } else if (c == 5) {
-      p = "Tue"
-    } else if (c == 6) {
-      p = "Wed"
-    } else if (c == 7) {
-      p = "Thu"
-    } else if (c == 8) {
-      p = "Fri"   
-    } else if (c == 9) {
-      p = "Sat"
-    } else if (c == 10) {
-      p = "Sun"
-    } else if (c == 11) {
-      p = "Total"
-    }
-
-    sheet.getRange(x, y).setValue(p).setBackground('#FFFF00');
-    y++;
-}
   // Create Template for Overhead
   overheadSheet.getRange(1, 1).setValue("Overhead").setBackground('#FFFF00');
   overheadSheet.getRange(1, 2).setValue("Mon").setBackground('#FFFF00');
@@ -82,6 +54,21 @@ function createTemplates() {
   overheadSheet.getRange(1, 7).setValue("Sat").setBackground('#FFFF00');
   overheadSheet.getRange(1, 8).setValue("Sun").setBackground('#FFFF00');
   overheadSheet.getRange(1, 9).setValue("Total").setBackground('#FFFF00');
+
+  for (var j = 2; j < 1000; j++) {
+  var form = sheet.getRange("K" + j);
+  form.setFormula("=SUM(" + "D" + j + ":" + "J" + j + ")");
+}
+
+
+  for (var n = 2; n <= 1000; n++) {
+    var form2 = overheadSheet.getRange("I" + n);
+    form2.setFormula("=SUM(" + "B" + n + ":" + "H" + n + ")");
+  }
+
+
+
+
 
   return ss;
 }
@@ -94,8 +81,14 @@ function logEvents(ss, startingDate, endingDate, cal) {
   var events = cal.getEvents(new Date(startingDate), new Date(endingDate));
   var category1000to13000 = [];
   var category0to28 = [];
+  var alreadyRecorded1000to13000 = [];
   var firstNumber = [];
+  var status = false;
   var timeArr = [];
+  var alreadyRecorded0to28 = [];
+  var status2 = false;
+
+
   var row = 0;
   var overheadRow = 0;
 
@@ -123,14 +116,88 @@ function logEvents(ss, startingDate, endingDate, cal) {
       sheet.getRange(row + 2, 2).setValue(description);
       sheet.getRange(row + 2, date + 3.0).setValue(time);
       row++;
+      category1000to13000.push(firstWordNumber);
     } else if (firstWordNumber >= 0 && firstWordNumber <= 28) {
-      var overheadName = firstWord.split(" ")[1];
+      var overheadName = firstWord.split("-")[0];
       overheadSheet.getRange(overheadRow + 2, 1.0).setValue(overheadName);
-      Logger.log(overheadName);
       overheadSheet.getRange(overheadRow + 2, date + 1.0).setValue(time);
       overheadRow++;
+      category0to28.push(firstWordNumber);
     } else {
       //ignored to not cause confusion with events that arent project work.
     }
   }
+  
+}
+
+function replaceDataProjectSheet(sheet) {
+    //this code first checks the duplicates by going through the two dimensional array of values and then transfering the number to the two dimensioanl array of uniqueData, if there is a duplicate, if does not transfer any data
+  var range = sheet.getRange("A2:H20");
+  var values = range.getValues();
+  // Create an object to store unique values and their corresponding day numbers
+  var uniqueData = {};
+  // Iterate through the rows
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    // Check for duplicates in column A
+    if (!uniqueData.hasOwnProperty(row[0])) {
+      // If not a duplicate, add to uniqueData with day numbers
+      uniqueData[row[0]] = row.slice(1);
+    } else {
+      // If duplicate, update the day numbers in the existing entry
+      for (var j = 3; j < row.length; j++) {
+        if (row[j] !== "") {
+          uniqueData[row[0]][j - 1] = uniqueData[row[0]][j - 1]  + row[j];
+        }
+      }
+    }
+  }
+  // Clear the existing data in columns A to H
+  range.clearContent();
+  // Write the unique values and corresponding day numbers back to columns A to H
+  var outputData = [];
+  for (var key in uniqueData) {
+    Logger.log(uniqueData);
+    if (uniqueData.hasOwnProperty(key)) {
+      outputData.push([key, ...uniqueData[key]]);
+    }
+  }
+  var outputRange = sheet.getRange(2, 1, outputData.length, outputData[0].length);
+  outputRange.setValues(outputData); 
+}
+
+function replaceDataOverheadSheet(sheet) {
+  //this code first checks the duplicates by going through the two dimensional array of values and then transfering the number to the two dimensioanl array of uniqueData, if there is a duplicate, if does not transfer any data
+  var range = sheet.getRange("A2:H20");
+  var values = range.getValues();
+  // Create an object to store unique values and their corresponding day numbers
+  var uniqueData = {};
+  // Iterate through the rows
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    // Check for duplicates in column A
+    if (!uniqueData.hasOwnProperty(row[0])) {
+      // If not a duplicate, add to uniqueData with day numbers
+      uniqueData[row[0]] = row.slice(1);
+    } else {
+      // If duplicate, update the day numbers in the existing entry
+      for (var j = 3; j < row.length; j++) {
+        if (row[j] !== "") {
+          uniqueData[row[0]][j - 1] = uniqueData[row[0]][j - 1]  + row[j];
+        }
+      }
+    }
+  }
+  // Clear the existing data in columns A to H
+  range.clearContent();
+  // Write the unique values and corresponding day numbers back to columns A to H
+  var outputData = [];
+  for (var key in uniqueData) {
+    Logger.log(uniqueData);
+    if (uniqueData.hasOwnProperty(key)) {
+      outputData.push([key, ...uniqueData[key]]);
+    }
+  }
+  var outputRange = sheet.getRange(2, 1, outputData.length, outputData[0].length);
+  outputRange.setValues(outputData); 
 }
